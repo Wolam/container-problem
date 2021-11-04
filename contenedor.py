@@ -1,15 +1,17 @@
 #!/usr/bin/python3
 
+from os import PRIO_USER
+from statistics import mean
 import sys
 import textwrap
 import numpy as np
+import time
 
 # Algorithm constants
 BRUTE_FORCE = 1
 BOTTOM_UP = 2
 TOP_DOWN = 3
 ALL = 4
-
 
 # Argument usage helper
 def show_usage():
@@ -75,7 +77,6 @@ def brute_force_knapsack(capacity: int, weights: list, benefits: list, n: int, e
             elements_used += case_2
         return max_value
 
-
 def top_down_knapsack(capacity: int, weights: list, benefits: list, memo: list, current: int):
     if capacity <= 0 or current >= len(benefits):
         return 0
@@ -92,35 +93,38 @@ def top_down_knapsack(capacity: int, weights: list, benefits: list, memo: list, 
     memo[current][capacity] = max(item_not_taken, item_taken)
     return memo[current][capacity]
 
-
 def run_from_file():
     capacity, weights, benefits = generate_problem_from_file()
     n = len(benefits)
-    elements_used = []
+    algorithm = int(args[0])
+    iterations = int(args[3])
+    print(f'cap = {capacity} n = {n} weights = {weights} benefits = {benefits} iterations = {iterations} algorithm = {algorithm}')
     # TODO RUN THE DESIRED ALGORITHM(S) HERE
-    print(f'cap = {capacity} n = {n} weights = {weights} benefits = {benefits}')
-
+    parameters = {'capacity': capacity, 'n': n, 'weights': weights, 'benefits': benefits, 'iterations': iterations}
+    choose(algorithm, parameters)
 
 def generate_problem_from_file() -> tuple:
-    print(f'file is {args[2]}')
+    # print(f'file is {args[2]}')
     file = open(args[2], 'r')
     capacity = int(file.readline())
     weights, benefits = [], []
     for line in file:
-        capacity, b = map(int, line.split(","))
-        weights.append(capacity)
+        w, b = map(int, line.split(","))
+        weights.append(w)
         benefits.append(b)
     file.close()
     return capacity, weights, benefits
 
-
 def run_from_random():
+    algorithm = int(args[0])
     capacity = int(args[2])
     n = int(args[3])
     weights, benefits = generate_problem_from_random(n)
+    iterations = int(args[6])
+    print(f'cap = {capacity} n = {n} weights = {weights} benefits = {benefits} iterations = {iterations} algorithm = {algorithm}')
     # TODO RUN THE DESIRED ALGORITHM(S) HERE
-    print(f'cap = {capacity} n = {n} weights = {weights} benefits = {benefits}')
-
+    parameters = {'capacity': capacity, 'n': n, 'weights': weights, 'benefits': benefits, 'iterations': iterations}
+    choose(algorithm, parameters)
 
 def generate_problem_from_random(n: int) -> tuple:
     low_weight, high_weight = map(int, args[4].split(sep="-"))
@@ -130,6 +134,37 @@ def generate_problem_from_random(n: int) -> tuple:
     benefits = list(rng.integers(low=low_benefit, high=high_benefit, size=n))
     return weights, benefits
 
+def get_algorithm_runtimes(algorithm, iterations: int) -> list:
+    runtimes = []
+    for i in range(iterations):
+        begin = time.time()
+        result = algorithm
+        end = time.time()
+        runtime = end - begin
+        runtimes.append(runtime)
+    print(f'Result: {result}')
+    return runtimes
+
+def choose(algorithm: int, parameters: dict):
+    if algorithm == BRUTE_FORCE:
+        elements_used = []
+        runtimes = get_algorithm_runtimes(brute_force_knapsack(parameters['capacity'], parameters['weights'], 
+                                     parameters['benefits'], parameters['n'], elements_used), parameters['iterations'])
+        elements_used.sort()
+        print(f'Elements used: {elements_used}')
+        print(f'Runtime average: {mean(runtimes)}')
+
+    elif algorithm == BOTTOM_UP:
+        print("bottom up")
+
+    elif algorithm == TOP_DOWN:
+        print("top down")
+
+    elif algorithm == ALL:
+        print("all")
+
+    else: 
+        print("error")
 
 def main():
     if '-a' in args:
