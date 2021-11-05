@@ -1,12 +1,11 @@
 #!/usr/bin/python3
 
-from os import PRIO_USER
 from statistics import mean
 import sys
 import textwrap
 import numpy as np
 import time
-import copy
+
 
 # Argument usage helper
 def show_usage():
@@ -84,35 +83,32 @@ def brute_force_knapsack(capacity: int, weights: list, benefits: list, n: int, e
 
 
 def top_down_knapsack(capacity: int, weights: list, benefits: list, current: int, memo: list, elements_used: list):
-
-    case_1, case_2 = [], []
-
     if capacity <= 0 or current == len(benefits):
         return 0, []
 
     if memo[current][capacity] is not None:
-        return memo[current][capacity], elements_used
+        return memo[current][capacity]
 
-    included = -1
+    included_benefit, included = -1, []
     if weights[current] <= capacity:
-        case_1.append(current+1)
-        included, case_1 = top_down_knapsack(capacity - weights[current], weights, benefits,
-                                             current + 1, memo, case_1)
-        included += benefits[current]
+        included_benefit, included = top_down_knapsack(capacity - weights[current],
+                                                       weights, benefits,
+                                                       current + 1, memo, elements_used)
+        included_benefit += benefits[current]
+        included.append(current + 1)
 
-    not_included, case_2 = top_down_knapsack(capacity, weights, benefits, current + 1, memo, case_2)
+    not_included_benefit, not_included = \
+        top_down_knapsack(capacity, weights, benefits, current + 1, memo, elements_used)
 
-    if included >= not_included:
-        elements_used += case_1
-        memo[current][capacity] = included
+    if included_benefit >= not_included_benefit:
+        elements_used = included
+        memo[current][capacity] = included_benefit, elements_used
 
     else:
-        elements_used += case_2
-        memo[current][capacity] = not_included
+        elements_used = not_included
+        memo[current][capacity] = not_included_benefit, elements_used
 
-    print(f'elements used: {elements_used}')
-
-    return memo[current][capacity], elements_used
+    return memo[current][capacity]
 
 
 def run_from_file():
@@ -121,8 +117,8 @@ def run_from_file():
     algorithm = int(args[0])
     iterations = int(args[3])
     print(f'Capacity: {capacity} N: {n} Weights: {weights} Benefits: {benefits}')
-    knap_params = (capacity, weights, benefits, n)
-    choose_measure(algorithm, iterations, knap_params)
+    knapsack_params = (capacity, weights, benefits, n)
+    choose_measure(algorithm, iterations, knapsack_params)
 
 
 def generate_problem_from_file() -> tuple:
@@ -144,8 +140,8 @@ def run_from_random():
     iterations = int(args[6])
     weights, benefits = generate_problem_from_random(n)
     print(f'Capacity: {capacity} N: {n} Weights: {weights} Benefits: {benefits}')
-    knap_params = (capacity, weights, benefits, n)
-    choose_measure(algorithm, iterations, knap_params)
+    knapsack_params = (capacity, weights, benefits, n)
+    choose_measure(algorithm, iterations, knapsack_params)
 
 
 def generate_problem_from_random(n: int) -> tuple:
@@ -158,40 +154,36 @@ def generate_problem_from_random(n: int) -> tuple:
 
 
 def measure(algorithm, iterations: int) -> list:
-    runtimes, result = [], []
+    runtimes, result, items_used = [], [], []
     for _ in range(iterations):
         begin = time.time()
-        result = algorithm
+        result, items_used = algorithm
         end = time.time()
         runtime = end - begin
         runtimes.append(runtime)
-    print(f'Result: {result}')
+    items_used.reverse()
+    print(f'Result: {result}\nItems used: {items_used}')
     return runtimes
 
-def measure_top_down(iterations: int, knap_params):
-    capacity, weights, benefits, _ = knap_params
-    memo = [[None for _ in range(capacity+1)] for _ in range(len(benefits))]
-    knap_params = capacity, weights, benefits, 0, memo
-    elements_used = []
-    measures = measure(top_down_knapsack(*knap_params, elements_used), iterations)
-    elements_used.sort()
-    print(f'Elements used in top down knapsack algorithm: {elements_used}')
+
+def measure_top_down(iterations: int, knapsack_params):
+    capacity, weights, benefits, _ = knapsack_params
+    memo = [[None for _ in range(capacity + 1)] for _ in range(len(benefits))]
+    knapsack_params = capacity, weights, benefits, 0, memo
+    measures = measure(top_down_knapsack(*knapsack_params, elements_used=[]), iterations)
     return measures
 
 
-def measure_bottom_up(*argv):
+def measure_bottom_up():
     pass
 
 
-def measure_brute(iterations: int, knap_params):
-    elements_used = []
-    measures = measure(brute_force_knapsack(*knap_params, elements_used), iterations)
-    elements_used.sort()
-    print(f'Elements used in brute force algorithm: {elements_used}')
+def measure_brute(iterations: int, knapsack_params):
+    measures = measure(brute_force_knapsack(*knapsack_params, elements_used=[]), iterations)
     return measures
 
 
-def choose_measure(algorithm: int, iterations: int, knap_params: tuple):
+def choose_measure(algorithm: int, iterations: int, knapsack_params: tuple):
     measurers = {
         TOP_DOWN: {measure_top_down},
         BOTTOM_UP: {measure_bottom_up},
@@ -199,10 +191,9 @@ def choose_measure(algorithm: int, iterations: int, knap_params: tuple):
         COMPARE_ALL: {measure_top_down, measure_bottom_up, measure_brute}
     }.get(algorithm)
 
-    measurments = []
+    measurements = []
     for measurer in measurers:
-        #  elements_used.sort()
-        measurments.append(measurer(iterations, knap_params))
+        measurements.append(measurer(iterations, knapsack_params))
 
     if algorithm == COMPARE_ALL:
         pass
