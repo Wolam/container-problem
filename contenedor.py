@@ -51,36 +51,33 @@ COMPARE_ALL = 4
 
 def brute_force_knapsack(capacity: int, weights: list, benefits: list, n: int, elements_used: list) -> int:
     # hold the elements of the two combinations  
-    case_1 = []
-    case_2 = []
-
+    included = []
     # Base Case
     if n == 0 or capacity <= 0:
-        return 0
+        return 0, []
 
     # each item's weight can't be more than capacity
     if weights[n - 1] > capacity:
-        return brute_force_knapsack(capacity, weights, benefits, n - 1, case_2)
+        return brute_force_knapsack(capacity, weights, benefits, n - 1, elements_used)
 
     else:
-        case_1.append(n)  # put the element in case_1 and pass case_1
-        combination_1 = benefits[n - 1] + brute_force_knapsack(capacity - weights[n - 1], weights, benefits, n - 1,
-                                                               case_1)
-        # don't put anything in case_2 but pass case_2
-        combination_2 = brute_force_knapsack(capacity, weights, benefits, n - 1, case_2)
+        combination_1, included = brute_force_knapsack(capacity - weights[n - 1], weights, benefits, n - 1,
+                                                               included)
+        combination_1 += benefits[n - 1]
+        included.append(n)  # put the element in included and pass included
+
+        # don't put anything in not_included but pass not_included
+        combination_2, not_included = brute_force_knapsack(capacity, weights, benefits, n - 1, elements_used)
         # get the max situation between the two combinations
         max_value = max(combination_1, combination_2)
         # if this situation occurs then nth item is included
 
         if max_value == combination_1:
-            elements_used += case_1
+            elements_used = included
         else:
-            elements_used += case_2
+            elements_used = not_included
 
-        print(f'elements used: {elements_used}')
-
-        return max_value
-
+        return max_value, elements_used
 
 def top_down_knapsack(capacity: int, weights: list, benefits: list, current: int, memo: list, elements_used: list):
     if capacity <= 0 or current == len(benefits):
