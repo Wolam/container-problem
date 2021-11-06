@@ -79,6 +79,34 @@ def brute_force_knapsack(capacity: int, weights: list, benefits: list, n: int, e
 
         return max_value, elements_used
 
+def bottom_up_knapsack(capacity: int, weights: list, benefits: list, n: int, elements_used: list) -> int:
+    V = [[0 for _ in range(capacity+1)] for _ in range(n + 1)]
+
+    for i in range(1, n+1):
+        for w in range(1, capacity+1):
+            if weights[i-1] > w:
+                V[i][w] = V[i-1][w]
+            else:
+                if benefits[i-1] + V[i-1][w-weights[i-1]] > V[i-1][w]:
+                   V[i][w] = benefits[i-1] + V[i-1][w-weights[i-1]]
+                else:
+                   V[i][w] = V[i-1][w]
+
+    max_value = V[n][capacity]
+    w = capacity
+    i = n
+    elements_used = []
+    for _ in range(len(V)):
+        if V[i][w] != V[i-1][w]:
+            elements_used += [i]
+            i  = i -1
+            w = w - weights[i]
+        else:
+            i = i - 1
+
+    return max_value, elements_used
+
+
 def top_down_knapsack(capacity: int, weights: list, benefits: list, current: int, memo: list, elements_used: list):
     if capacity <= 0 or current == len(benefits):
         return 0, []
@@ -171,8 +199,9 @@ def measure_top_down(iterations: int, knapsack_params):
     return measures
 
 
-def measure_bottom_up():
-    pass
+def measure_bottom_up(iterations: int, knapsack_params):
+    measures = measure(bottom_up_knapsack(*knapsack_params, elements_used=[]), iterations)
+    return measures
 
 
 def measure_brute(iterations: int, knapsack_params):
@@ -190,7 +219,11 @@ def choose_measure(algorithm: int, iterations: int, knapsack_params: tuple):
 
     measurements = []
     for measurer in measurers:
-        measurements.append(measurer(iterations, knapsack_params))
+        measurements += measurer(iterations, knapsack_params)
+
+    print(measurements)
+    average = sum(measurements) / len(measurements)
+    print(average)
 
     if algorithm == COMPARE_ALL:
         pass
