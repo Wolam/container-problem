@@ -5,8 +5,10 @@ import textwrap
 import time
 from statistics import mean
 from typing import Tuple, List
+from os.path import exists as file_exists
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 
 # Argument usage helper
@@ -100,6 +102,7 @@ def bottom_up_container(capacity: int, weights: list, benefits: list, n: int, el
     :param elements_used: element the algorithm choose
     :return: the max value and the list of selected items
     """
+    elements_used = []
     V = [[0 for _ in range(capacity + 1)] for _ in range(n + 1)]  # benefit matrix
 
     for i in range(1, n + 1):
@@ -137,8 +140,8 @@ def top_down_container(capacity: int, weights: list, benefits: list, current: in
     included_benefit, included = -1, []
     if weights[current] <= capacity:
         included_benefit, included = top_down_container(capacity - weights[current],
-                                                       weights, benefits,
-                                                       current + 1, memo)
+                                                        weights, benefits,
+                                                        current + 1, memo)
         included_benefit += benefits[current]
 
     not_included_benefit, not_included = \
@@ -166,8 +169,8 @@ def run_from_file() -> None:
     algorithm = int(args[0])
     iterations = int(args[3])
     print(f'Capacity: {capacity} N: {n} Weights: {weights} Benefits: {benefits}')
-    conteiner_params = (capacity, weights, benefits, n)
-    choose_measure(algorithm, iterations, conteiner_params)
+    container_params = (capacity, weights, benefits, n)
+    choose_measure(algorithm, iterations, container_params)
 
 
 def generate_problem_from_file() -> tuple:
@@ -197,8 +200,8 @@ def run_from_random() -> None:
     iterations = int(args[6])
     weights, benefits = generate_problem_from_random(n)
     print(f'Capacity: {capacity} N: {n} Weights: {weights} Benefits: {benefits}')
-    conteiner_params = (capacity, weights, benefits, n)
-    choose_measure(algorithm, iterations, conteiner_params)
+    container_params = (capacity, weights, benefits, n)
+    choose_measure(algorithm, iterations, container_params)
 
 
 def generate_problem_from_random(n: int) -> tuple:
@@ -219,6 +222,8 @@ def measure(algorithm, parameters, elements_used, iterations: int) -> int:
     """
     Run time of the algorithm run
     :param algorithm: information of the algorithm
+    :param parameters: parameters for use in the function
+    :param elements_used: items used
     :param iterations: number of times the code must be run
     :return: a num with the mean of runtimes
     """
@@ -226,7 +231,7 @@ def measure(algorithm, parameters, elements_used, iterations: int) -> int:
     runtimes = []
     for _ in range(iterations):
         begin = time.time()
-        result,items_used = algorithm(*parameters, elements_used)
+        result, items_used = algorithm(*parameters, elements_used)
         end = time.time()
         runtime = end - begin
         runtimes.append(runtime)
@@ -235,43 +240,56 @@ def measure(algorithm, parameters, elements_used, iterations: int) -> int:
     return mean(runtimes)
 
 
-def measure_brute(iterations: int, conteiner_params) -> int:
+def measure_brute(iterations: int, container_params) -> int:
     """
     Calculate the mean time and the maximum result for the container
     :param iterations: number of times the code must be run
-    :param conteiner_params: data of the algorithm
+    :param container_params: data of the algorithm
     :return: a num with the mean of runtimes
     """
     print('Measuring brute force algorithm...')
-    measures = measure(brute_force_container, conteiner_params, [], iterations)
+    measures = measure(brute_force_container, container_params, [], iterations)
     return measures
 
 
-def measure_bottom_up(iterations: int, conteiner_params) -> int:
+def measure_bottom_up(iterations: int, container_params) -> int:
     """
     Calculate the mean time and the maximum result for the container
     :param iterations: number of times the code must be run
-    :param conteiner_params: data of the algorithm
+    :param container_params: data of the algorithm
     :return: a num with the mean of runtimes
     """
     print('Measuring bottom up algorithm...')
-    measures = measure(bottom_up_container, conteiner_params, [], iterations)
+    measures = measure(bottom_up_container, container_params, [], iterations)
     return measures
 
 
-def measure_top_down(iterations: int, conteiner_params) -> int:
+def measure_top_down(iterations: int, container_params) -> int:
     """
     Calculate the mean time and the maximum result for the container
     :param iterations: number of times the code must be run
-    :param conteiner_params: data of the algorithm
+    :param container_params: data of the algorithm
     :return: a num with the mean of runtimes
     """
-    capacity, weights, benefits, _ = conteiner_params
+    capacity, weights, benefits, _ = container_params
     memo = [[None for _ in range(capacity + 1)] for _ in range(len(benefits))]
-    conteiner_params = capacity, weights, benefits, 0
+    container_params = capacity, weights, benefits, 0
     print('Measuring top down algorithm...')
-    measures = measure(top_down_container, conteiner_params, memo, iterations)
+    measures = measure(top_down_container, container_params, memo, iterations)
     return measures
+
+
+def exists_filename() -> str:
+    """
+    checks if the filename exists
+    :return: string with the name of the new file
+    """
+    i = 1
+    name = 'result_graphs/algorithms_runtimes.png'
+    while file_exists(name):
+        name = 'result_graphs/algorithms_runtimes' + str(i) + '.png'
+        i += 1
+    return name
 
 
 def graph_data(x, y) -> None:
@@ -285,15 +303,16 @@ def graph_data(x, y) -> None:
     plt.ylabel('Average of algorithm times')  # Text Y
     plt.xlabel('Types of algorithms')  # Text X
     plt.title('Average times')  # Text Title
-    plt.savefig("result_graphs/algorithms_runtimes.png") # Save graphic
+    plt.savefig(exists_filename())  # Save graphic
     plt.show()  # Show graphic
 
-def choose_measure(algorithm: int, iterations: int, conteiner_params: tuple) -> None:
+
+def choose_measure(algorithm: int, iterations: int, container_params: tuple) -> None:
     """
     Choose measure and calculate the time
     :param algorithm: num with the option of algorithm
     :param iterations: number of times the code must be run
-    :param conteiner_params: data of the algorithm
+    :param container_params: data of the algorithm
     :return: None
     """
     measurers = {
@@ -305,14 +324,15 @@ def choose_measure(algorithm: int, iterations: int, conteiner_params: tuple) -> 
 
     measurements = []
     for measurer in measurers:
-        measurements += [measurer(iterations, conteiner_params)]
+        measurements += [measurer(iterations, container_params)]
 
-    print("Average of times: " + str(measurements))
     if algorithm == COMPARE_ALL:
-        x = ['Brute', 'Bottom Up', 'Top Down']
+        x = ['Brute Force', 'Bottom Up', 'Top Down']
         y = measurements
+        print(pd.DataFrame(data=y, index=x, columns=["Averages Times"]))
         graph_data(x, y)
-
+    else:
+        print("Average of times: " + str(measurements))
 
 
 def main() -> None:
