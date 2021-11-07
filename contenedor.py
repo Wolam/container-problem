@@ -5,7 +5,7 @@ import sys
 import textwrap
 import numpy as np
 import time
-
+import matplotlib.pyplot as plt
 
 # Argument usage helper
 def show_usage():
@@ -178,7 +178,7 @@ def generate_problem_from_random(n: int) -> tuple:
     return weights, benefits
 
 
-def measure(algorithm, iterations: int) -> list:
+def measure(num_algorithm, algorithm, iterations: int) -> list:
     runtimes, result, items_used = [], [], []
     for _ in range(iterations):
         begin = time.time()
@@ -187,46 +187,61 @@ def measure(algorithm, iterations: int) -> list:
         runtime = end - begin
         runtimes.append(runtime)
     items_used.reverse()
-    print(f'Result: {result}\nItems used: {items_used}')
+    print(f'Algorithm: {num_algorithm}\n Result: {result}\nItems used: {items_used}')
     return runtimes
 
+def measure_brute(iterations: int, knapsack_params):
+    measures = measure(1, brute_force_knapsack(*knapsack_params, elements_used=[]), iterations)
+    return measures
+
+def measure_bottom_up(iterations: int, knapsack_params):
+    measures = measure(2, bottom_up_knapsack(*knapsack_params, elements_used=[]), iterations)
+    return measures
 
 def measure_top_down(iterations: int, knapsack_params):
     capacity, weights, benefits, _ = knapsack_params
     memo = [[None for _ in range(capacity + 1)] for _ in range(len(benefits))]
     knapsack_params = capacity, weights, benefits, 0, memo
-    measures = measure(top_down_knapsack(*knapsack_params, elements_used=[]), iterations)
+    measures = measure(3, top_down_knapsack(*knapsack_params, elements_used=[]), iterations)
     return measures
 
 
-def measure_bottom_up(iterations: int, knapsack_params):
-    measures = measure(bottom_up_knapsack(*knapsack_params, elements_used=[]), iterations)
-    return measures
-
-
-def measure_brute(iterations: int, knapsack_params):
-    measures = measure(brute_force_knapsack(*knapsack_params, elements_used=[]), iterations)
-    return measures
-
+def grafic_data(x, y):
+    plt.bar(x, y)
+    plt.ylabel('Average of algorithm times') ## Text Y
+    plt.xlabel('Types of algoritms')   ## Text X
+    plt.title('Average times of size: ') ## Text Title
+    plt.show()   ## Show grafic
 
 def choose_measure(algorithm: int, iterations: int, knapsack_params: tuple):
     measurers = {
-        TOP_DOWN: {measure_top_down},
-        BOTTOM_UP: {measure_bottom_up},
         BRUTE_FORCE: {measure_brute},
-        COMPARE_ALL: {measure_top_down, measure_bottom_up, measure_brute}
+        BOTTOM_UP: {measure_bottom_up},
+        TOP_DOWN: {measure_top_down},
+        COMPARE_ALL: {measure_brute, measure_bottom_up, measure_top_down}
     }.get(algorithm)
 
     measurements = []
     for measurer in measurers:
         measurements += measurer(iterations, knapsack_params)
 
-    print(measurements)
-    average = sum(measurements) / len(measurements)
-    print(average)
-
     if algorithm == COMPARE_ALL:
-        pass
+        average = []
+        final_list = lambda measurements, iterations: [measurements[i:i + iterations] for i in range(0, len(measurements), iterations)]
+        list_times = final_list(measurements, iterations)
+        for i in range(len(list_times)):
+            average.append(sum(list_times[i]) / len(list_times[i]))
+
+        print("Average", str(average))
+        #print(measurements)
+        x = ['Top Down', 'Bottom Up', 'Brute']
+        y = average
+        #grafic_data(x, y)
+
+    else:
+        average = sum(measurements) / len(measurements)
+        print("Average", str(average))
+        #print(measurements)
 
 
 def main():
