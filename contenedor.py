@@ -65,8 +65,7 @@ def brute_force_knapsack(capacity: int, weights: list, benefits: list, n: int, e
         return brute_force_knapsack(capacity, weights, benefits, n - 1, elements_used)
 
     else:
-        included_benefit, included = brute_force_knapsack(capacity - weights[n - 1], weights, benefits, n - 1,
-                                                       included)
+        included_benefit, included = brute_force_knapsack(capacity - weights[n - 1], weights, benefits, n - 1, included)
         included_benefit += benefits[n - 1]
         included.append(n)  # put the element in included and pass included
 
@@ -86,7 +85,15 @@ def brute_force_knapsack(capacity: int, weights: list, benefits: list, n: int, e
 
 def bottom_up_knapsack(capacity: int, weights: list, benefits: list, n: int, elements_used: list)\
                         -> Tuple[int, list]:
-    V = [[0 for _ in range(capacity + 1)] for _ in range(n + 1)]
+    """
+    :param capacity: maximum weight of the container
+    :param weights: different weights of the elements
+    :param benefits: benefits of every element
+    :param n: num of elements
+    :param elements_used: element the algorithm choose
+    :return: the max value and the list of selected items
+    """
+    V = [[0 for _ in range(capacity + 1)] for _ in range(n + 1)]  # benefit matrix
 
     for i in range(1, n + 1):
         for w in range(1, capacity + 1):
@@ -96,11 +103,12 @@ def bottom_up_knapsack(capacity: int, weights: list, benefits: list, n: int, ele
                 if benefits[i - 1] + V[i - 1][w - weights[i - 1]] > V[i - 1][w]:
                     V[i][w] = benefits[i - 1] + V[i - 1][w - weights[i - 1]]
                 else:
-                    V[i][w] = V[i - 1][w]
+                    V[i][w] = V[i - 1][w]    # puts the previous element
 
     max_value = V[n][capacity]
     w = capacity
     i = n
+    # check from bottom to top
     for _ in range(len(V)):
         if V[i][w] != V[i - 1][w]:
             elements_used += [i]
@@ -141,7 +149,11 @@ def top_down_knapsack(capacity: int, weights: list, benefits: list, current: int
     return memo[current][capacity]
 
 
-def run_from_file():
+def run_from_file() -> None:
+    """
+    Get data of file and initializes variables
+    :return: None
+    """
     capacity, weights, benefits = generate_problem_from_file()
     n = len(benefits)
     algorithm = int(args[0])
@@ -152,6 +164,10 @@ def run_from_file():
 
 
 def generate_problem_from_file() -> tuple:
+    """
+    Read data from file and separate in list weights and benefits
+    :return: tuple with values (capacity, list of weights and benefits)
+    """
     file = open(args[2], 'r')
     capacity = int(file.readline())
     weights, benefits = [], []
@@ -163,7 +179,11 @@ def generate_problem_from_file() -> tuple:
     return capacity, weights, benefits
 
 
-def run_from_random():
+def run_from_random() -> None:
+    """
+    Generate random elements and initializes variables
+    :return: None
+    """
     algorithm = int(args[0])
     capacity = int(args[2])
     n = int(args[3])
@@ -175,6 +195,11 @@ def run_from_random():
 
 
 def generate_problem_from_random(n: int) -> tuple:
+    """
+    Generate random elements with the intervals specified
+    :param n: num of elements
+    :return: tuple with the list of weights and benefits
+    """
     low_weight, high_weight = map(int, args[4].split(sep="-"))
     low_benefit, high_benefit = map(int, args[5].split(sep="-"))
     rng = np.random.default_rng()
@@ -183,7 +208,13 @@ def generate_problem_from_random(n: int) -> tuple:
     return weights, benefits
 
 
-def measure(algorithm, iterations: int) -> list:
+def measure(algorithm, iterations: int) -> int:
+    """
+    Run time of the algorithm run
+    :param algorithm: information of the algorithm
+    :param iterations: number of times the code must be run
+    :return: a num with the mean of runtimes
+    """
     runtimes, result, items_used = [], [], []
     for _ in range(iterations):
         begin = time.time()
@@ -193,22 +224,40 @@ def measure(algorithm, iterations: int) -> list:
         runtimes.append(runtime)
     items_used.reverse()
     print(f'Result: {result}\nItems used: {items_used}')
-    return runtimes
+    return mean(runtimes)
 
 
-def measure_brute(iterations: int, knapsack_params):
+def measure_brute(iterations: int, knapsack_params) -> int:
+    """
+    Calculate the mean time and the maximum result for the container
+    :param iterations: number of times the code must be run
+    :param knapsack_params: data of the algorithm
+    :return: a num with the mean of runtimes
+    """
     print('Measuring brute force algorithm...')
     measures = measure(brute_force_knapsack(*knapsack_params, elements_used=[]), iterations)
     return measures
 
 
-def measure_bottom_up(iterations: int, knapsack_params):
+def measure_bottom_up(iterations: int, knapsack_params) -> int:
+    """
+    Calculate the mean time and the maximum result for the container
+    :param iterations: number of times the code must be run
+    :param knapsack_params: data of the algorithm
+    :return: a num with the mean of runtimes
+    """
     print('Measuring bottom up algorithm...')
     measures = measure(bottom_up_knapsack(*knapsack_params, elements_used=[]), iterations)
     return measures
 
 
-def measure_top_down(iterations: int, knapsack_params):
+def measure_top_down(iterations: int, knapsack_params) -> int:
+    """
+    Calculate the mean time and the maximum result for the container
+    :param iterations: number of times the code must be run
+    :param knapsack_params: data of the algorithm
+    :return: a num with the mean of runtimes
+    """
     capacity, weights, benefits, _ = knapsack_params
     memo = [[None for _ in range(capacity + 1)] for _ in range(len(benefits))]
     knapsack_params = capacity, weights, benefits, 0, memo
@@ -217,15 +266,28 @@ def measure_top_down(iterations: int, knapsack_params):
     return measures
 
 
-def graph_data(x, y):
-    plt.bar(x, y)
+def graph_data(x, y) -> None:
+    """
+    shows the bar graph with the average results
+    :param x: Name of the algorithms['Brute', 'Bottom Up', 'Top Down']
+    :param y: average list of the three algorithms
+    :return: None
+    """
+    plt.bar(x, y)  # algorithms data
     plt.ylabel('Average of algorithm times')  # Text Y
     plt.xlabel('Types of algorithms')  # Text X
-    plt.title('Average times of size: ')  # Text Title
+    plt.title('Average times')  # Text Title
     plt.show()  # Show graphic
 
 
-def choose_measure(algorithm: int, iterations: int, knapsack_params: tuple):
+def choose_measure(algorithm: int, iterations: int, knapsack_params: tuple) -> None:
+    """
+    Choose measure and calculate the time
+    :param algorithm: num with the option of algorithm
+    :param iterations: number of times the code must be run
+    :param knapsack_params: data of the algorithm
+    :return: None
+    """
     measurers = {
         BRUTE_FORCE: [measure_brute],
         BOTTOM_UP: [measure_bottom_up],
@@ -235,26 +297,21 @@ def choose_measure(algorithm: int, iterations: int, knapsack_params: tuple):
 
     measurements = []
     for measurer in measurers:
-        measurements += measurer(iterations, knapsack_params)
+        measurements += [measurer(iterations, knapsack_params)]
 
     if algorithm == COMPARE_ALL:
-        average = []
-        final_list = lambda measurements, iterations: [measurements[i:i + iterations] for i in
-                                                       range(0, len(measurements), iterations)]
-        list_times = final_list(measurements, iterations)
-        for i in range(len(list_times)):
-            average.append(sum(list_times[i]) / len(list_times[i]))
-
-        print("Average", str(average))
         x = ['Brute', 'Bottom Up', 'Top Down']
-        y = average
+        y = measurements
         graph_data(x, y)
 
-    else:
-        print(f'Average: {mean(measurements)}')
+    print("Average of times: " + str(measurements))
 
 
-def main():
+def main() -> None:
+    """
+    Main function choose if run from the file or random data
+    :return: None
+    """
     if '-a' in args:
         run_from_file()
 
