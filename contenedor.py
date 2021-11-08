@@ -3,30 +3,32 @@ import copy
 import sys
 import textwrap
 import time
+from os.path import exists as file_exists
 from statistics import mean
 from typing import Tuple, List
-from os.path import exists as file_exists
+
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+from pandas import DataFrame as Df
 
 
 # Argument usage helper
 def show_usage():
-    help = textwrap.dedent('''
+    usage = textwrap.dedent('''
     NAME
         Python 3 container Problem Analysis
     SYNOPSIS
         contenedor.py [-h] algorithm -a file.txt iterations
         contenedor.py [-h] algorithm -p capacity N weights benefits iterations
     DESCRIPTION
-    
+        Solves a given container problem in a file or a random generated one
+        with the possibility of executing a single or multiple algorithms.
     ALGORITHM
         Desired algorithm to solve the problem.
-        1 = 
-        2 = 
-        3 = 
-        4 =
+        1 = Brute force algorithm
+        2 = Bottom up algorithm
+        3 = Top Down using memoization algorithms
+        4 = Compare/Run all algorithms
     FILE 
         Text file with the container problem in the correct format
     CAPACITY
@@ -40,7 +42,7 @@ def show_usage():
     ITERATIONS
         Number of times the algorithm should be run
     ''')
-    print(help)
+    print(usage)
 
 
 # Remove program name from arguments
@@ -74,7 +76,8 @@ def brute_force_container(capacity: int, weights: list, benefits: list, n: int, 
         return brute_force_container(capacity, weights, benefits, n - 1, elements_used)
 
     else:
-        included_benefit, included = brute_force_container(capacity - weights[n - 1], weights, benefits, n - 1, included)
+        included_benefit, included = brute_force_container(capacity - weights[n - 1],
+                                                           weights, benefits, n - 1, included)
         included_benefit += benefits[n - 1]
         included.append(n)  # put the element in included and pass included
 
@@ -92,17 +95,18 @@ def brute_force_container(capacity: int, weights: list, benefits: list, n: int, 
         return best_benefit, elements_used
 
 
-def bottom_up_container(capacity: int, weights: list, benefits: list, n: int, elements_used: list)\
+def bottom_up_container(capacity: int, weights: list,
+                        benefits: list, n: int, elements_used: list)\
                         -> Tuple[int, list]:
     """
     :param capacity: maximum weight of the container
     :param weights: different weights of the elements
     :param benefits: benefits of every element
     :param n: num of elements
-    :param elements_used: element the algorithm choose
+    :param elements_used: items taken in the container
     :return: the max value and the list of selected items
     """
-    elements_used = []
+
     V = [[0 for _ in range(capacity + 1)] for _ in range(n + 1)]  # benefit matrix
 
     for i in range(1, n + 1):
@@ -131,6 +135,15 @@ def bottom_up_container(capacity: int, weights: list, benefits: list, n: int, el
 
 
 def top_down_container(capacity: int, weights: list, benefits: list, current: int, memo: list):
+    """
+    :param capacity: maximum weight of the container
+    :param weights: different weights of the elements
+    :param benefits: benefits of every element
+    :param current: current index being compared in the container
+    :param memo: memory of values and items already calculated
+    :return: the max value and the list of selected items
+    """
+
     if capacity <= 0 or current >= len(benefits):
         return 0, []
 
@@ -218,7 +231,8 @@ def generate_problem_from_random(n: int) -> tuple:
     return weights, benefits
 
 
-def measure(algorithm, parameters, elements_used, iterations: int) -> int:
+def measure(algorithm: callable, parameters: tuple,
+            elements_used: list, iterations: int) -> float:
     """
     Run time of the algorithm run
     :param algorithm: information of the algorithm
@@ -240,7 +254,7 @@ def measure(algorithm, parameters, elements_used, iterations: int) -> int:
     return mean(runtimes)
 
 
-def measure_brute(iterations: int, container_params) -> int:
+def measure_brute(iterations: int, container_params: tuple) -> float:
     """
     Calculate the mean time and the maximum result for the container
     :param iterations: number of times the code must be run
@@ -252,7 +266,7 @@ def measure_brute(iterations: int, container_params) -> int:
     return measures
 
 
-def measure_bottom_up(iterations: int, container_params) -> int:
+def measure_bottom_up(iterations: int, container_params: tuple) -> float:
     """
     Calculate the mean time and the maximum result for the container
     :param iterations: number of times the code must be run
@@ -264,7 +278,7 @@ def measure_bottom_up(iterations: int, container_params) -> int:
     return measures
 
 
-def measure_top_down(iterations: int, container_params) -> int:
+def measure_top_down(iterations: int, container_params: tuple) -> float:
     """
     Calculate the mean time and the maximum result for the container
     :param iterations: number of times the code must be run
@@ -292,7 +306,7 @@ def exists_filename() -> str:
     return name
 
 
-def graph_data(x, y) -> None:
+def graph_data(x: list, y: list) -> None:
     """
     shows the bar graph with the average results
     :param x: Name of the algorithms['Brute', 'Bottom Up', 'Top Down']
@@ -307,7 +321,8 @@ def graph_data(x, y) -> None:
     plt.show()  # Show graphic
 
 
-def choose_measure(algorithm: int, iterations: int, container_params: tuple) -> None:
+def choose_measure(algorithm: int, iterations: int,
+                   container_params: tuple) -> None:
     """
     Choose measure and calculate the time
     :param algorithm: num with the option of algorithm
@@ -329,7 +344,7 @@ def choose_measure(algorithm: int, iterations: int, container_params: tuple) -> 
     if algorithm == COMPARE_ALL:
         x = ['Brute Force', 'Bottom Up', 'Top Down']
         y = measurements
-        print(pd.DataFrame(data=y, index=x, columns=["Averages Times"]))
+        print(Df(data=y, index=x, columns=["Averages Times"]))
         graph_data(x, y)
     else:
         print("Average of times: " + str(measurements))
