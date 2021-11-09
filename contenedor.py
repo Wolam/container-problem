@@ -127,7 +127,7 @@ def bottom_up_container(capacity: int, weights: list,
     i = n
     # check from bottom to top
     for _ in range(len(V)):
-        if V[i][w] != V[i - 1][w]:
+        if V[i][w] != V[i - 1][w] and i != 0:
             elements_used += [i]
             i = i - 1
             w = w - weights[i]
