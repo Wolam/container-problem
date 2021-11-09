@@ -106,7 +106,10 @@ def bottom_up_container(capacity: int, weights: list,
     :param elements_used: items taken in the container
     :return: the max value and the list of selected items
     """
+    if n == 0 or capacity <= 0:
+        return 0, []
 
+    elements_used = []
     V = [[0 for _ in range(capacity + 1)] for _ in range(n + 1)]  # benefit matrix
 
     for i in range(1, n + 1):
@@ -249,7 +252,6 @@ def measure(algorithm: callable, parameters: tuple,
         end = time.time()
         runtime = end - begin
         runtimes.append(runtime)
-    items_used.reverse()
     print(f'Result: {result}\nItems used: {items_used}')
     return mean(runtimes)
 
@@ -318,7 +320,6 @@ def graph_data(x: list, y: list) -> None:
     plt.xlabel('Types of algorithms')  # Text X
     plt.title('Average times')  # Text Title
     plt.savefig(exists_filename())  # Save graphic
-    plt.show()  # Show graphic
 
 
 def choose_measure(algorithm: int, iterations: int,
@@ -344,6 +345,7 @@ def choose_measure(algorithm: int, iterations: int,
     if algorithm == COMPARE_ALL:
         x = ['Brute Force', 'Bottom Up', 'Top Down']
         y = measurements
+        print("Average of times: " + str(measurements))
         print(Df(data=y, index=x, columns=["Averages Times"]))
         graph_data(x, y)
     else:
