@@ -345,11 +345,11 @@ def choose_measure(algorithm: int, iterations: int,
     if algorithm == COMPARE_ALL:
         x = ['Brute Force', 'Bottom Up', 'Top Down']
         y = measurements
-        print("Average of times: " + str(measurements))
+        print("Average times: " + str(measurements))
         print(Df(data=y, index=x, columns=["Averages Times"]))
         graph_data(x, y)
     else:
-        print("Average of times: " + str(measurements))
+        print("Average time: " + str(measurements))
 
 
 def main() -> None:
