@@ -8,7 +8,7 @@ from statistics import mean
 from typing import Tuple, List
 
 import matplotlib.pyplot as plt
-import numpy as np
+from numpy import random
 from pandas import DataFrame as Df
 
 
@@ -55,85 +55,82 @@ TOP_DOWN = 3
 COMPARE_ALL = 4
 
 
-def brute_force_container(capacity: int, weights: list, benefits: list, n: int, elements_used: list)\
-                        -> Tuple[int, List]:
+def brute_force_container(capacity: int, weights: list, benefits: list,
+                          current: int, elements_used: list) -> Tuple[int, List]:
     """
     :param capacity: maximum weight of the container
     :param weights: different weights of the elements
     :param benefits: benefits of every element
-    :param n: num of elements
+    :param current: current index being compared in the container
     :param elements_used: element the algorithm choose
     :return: the max value and the list of selected items
     """
     # hold the included elements in the container
     included = []
     # Base Case
-    if n == 0 or capacity <= 0:
+    if current == 0 or capacity <= 0:
         return 0, []
 
     # each item's weight can't be more than capacity
-    if weights[n - 1] > capacity:
-        return brute_force_container(capacity, weights, benefits, n - 1, elements_used)
+    if weights[current - 1] > capacity:
+        return brute_force_container(capacity, weights, benefits, current - 1, elements_used)
 
+    included_benefit, included = brute_force_container(capacity - weights[current - 1],
+                                                       weights, benefits, current - 1, included)
+    included_benefit += benefits[current - 1]
+    included.append(current)  # put the element in included and pass included
+
+    # don't put anything in not_included but pass not_included
+    not_included_benefit, not_included = brute_force_container(capacity, weights,
+                                                               benefits, current - 1, elements_used)
+
+    # if this situation occurs then nth item is included
+    if included_benefit >= not_included_benefit:
+        best_benefit = included_benefit
+        elements_used = included
     else:
-        included_benefit, included = brute_force_container(capacity - weights[n - 1],
-                                                           weights, benefits, n - 1, included)
-        included_benefit += benefits[n - 1]
-        included.append(n)  # put the element in included and pass included
+        best_benefit = not_included_benefit
+        elements_used = not_included
 
-        # don't put anything in not_included but pass not_included
-        not_included_benefit, not_included = brute_force_container(capacity, weights, benefits, n - 1, elements_used)
-
-        # if this situation occurs then nth item is included
-        if included_benefit >= not_included_benefit:
-            best_benefit = included_benefit
-            elements_used = included
-        else:
-            best_benefit = not_included_benefit
-            elements_used = not_included
-
-        return best_benefit, elements_used
+    return best_benefit, elements_used
 
 
 def bottom_up_container(capacity: int, weights: list,
-                        benefits: list, n: int, elements_used: list)\
-                        -> Tuple[int, list]:
+                        benefits: list, n: int) -> Tuple[int, list]:
     """
     :param capacity: maximum weight of the container
     :param weights: different weights of the elements
     :param benefits: benefits of every element
     :param n: num of elements
-    :param elements_used: items taken in the container
     :return: the max value and the list of selected items
     """
     if n == 0 or capacity <= 0:
         return 0, []
 
     elements_used = []
-    V = [[0 for _ in range(capacity + 1)] for _ in range(n + 1)]  # benefit matrix
-
+    # previously calculated benefits
+    memo = [[0 for _ in range(capacity + 1)] for _ in range(n + 1)]
     for i in range(1, n + 1):
         for w in range(1, capacity + 1):
             if weights[i - 1] > w:
-                V[i][w] = V[i - 1][w]
+                memo[i][w] = memo[i - 1][w]
             else:
-                if benefits[i - 1] + V[i - 1][w - weights[i - 1]] > V[i - 1][w]:
-                    V[i][w] = benefits[i - 1] + V[i - 1][w - weights[i - 1]]
+                if benefits[i - 1] + memo[i - 1][w - weights[i - 1]] > memo[i - 1][w]:
+                    memo[i][w] = benefits[i - 1] + memo[i - 1][w - weights[i - 1]]
                 else:
-                    V[i][w] = V[i - 1][w]    # puts the previous element
+                    memo[i][w] = memo[i - 1][w]    # puts the previous element
 
-    max_value = V[n][capacity]
     w = capacity
     i = n
     # check from bottom to top
-    for _ in range(len(V)):
-        if V[i][w] != V[i - 1][w] and i != 0:
+    for _ in range(len(memo)):
+        if memo[i][w] != memo[i - 1][w] and i != 0:
             elements_used += [i]
-            i = i - 1
+            i -= 1
             w = w - weights[i]
         else:
-            i = i - 1
-
+            i -= 1
+    max_value = memo[n][capacity]
     return max_value, elements_used
 
 
@@ -194,13 +191,13 @@ def generate_problem_from_file() -> tuple:
     Read data from file and separate in list weights and benefits
     :return: tuple with values (capacity, list of weights and benefits)
     """
-    file = open(args[2], 'r')
-    capacity = int(file.readline())
-    weights, benefits = [], []
-    for line in file:
-        w, b = map(int, line.split(","))
-        weights.append(w)
-        benefits.append(b)
+    with open(args[2], 'r', encoding='UTF8') as file:
+        capacity = int(file.readline())
+        weights, benefits = [], []
+        for line in file:
+            weight, benefit = map(int, line.split(","))
+            weights.append(weight)
+            benefits.append(benefit)
     file.close()
     return capacity, weights, benefits
 
@@ -228,19 +225,18 @@ def generate_problem_from_random(n: int) -> tuple:
     """
     low_weight, high_weight = map(int, args[4].split(sep="-"))
     low_benefit, high_benefit = map(int, args[5].split(sep="-"))
-    rng = np.random.default_rng()
+    rng = random.default_rng()
     weights = list(rng.integers(low=low_weight, high=high_weight, size=n))
     benefits = list(rng.integers(low=low_benefit, high=high_benefit, size=n))
     return weights, benefits
 
 
 def measure(algorithm: callable, parameters: tuple,
-            elements_used: list, iterations: int) -> float:
+            iterations: int) -> float:
     """
     Run time of the algorithm run
     :param algorithm: information of the algorithm
-    :param parameters: parameters for use in the function
-    :param elements_used: items used
+    :param parameters: container parameters used in the algorithm
     :param iterations: number of times the code must be run
     :return: a num with the mean of runtimes
     """
@@ -248,7 +244,7 @@ def measure(algorithm: callable, parameters: tuple,
     runtimes = []
     for _ in range(iterations):
         begin = time.time()
-        result, items_used = algorithm(*parameters, elements_used)
+        result, items_used = algorithm(*parameters)
         end = time.time()
         runtime = end - begin
         runtimes.append(runtime)
@@ -264,7 +260,8 @@ def measure_brute(iterations: int, container_params: tuple) -> float:
     :return: a num with the mean of runtimes
     """
     print('Measuring brute force algorithm...')
-    measures = measure(brute_force_container, container_params, [], iterations)
+    brute_params = *container_params, []
+    measures = measure(brute_force_container, brute_params, iterations)
     return measures
 
 
@@ -276,7 +273,7 @@ def measure_bottom_up(iterations: int, container_params: tuple) -> float:
     :return: a num with the mean of runtimes
     """
     print('Measuring bottom up algorithm...')
-    measures = measure(bottom_up_container, container_params, [], iterations)
+    measures = measure(bottom_up_container, container_params, iterations)
     return measures
 
 
@@ -289,13 +286,13 @@ def measure_top_down(iterations: int, container_params: tuple) -> float:
     """
     capacity, weights, benefits, _ = container_params
     memo = [[None for _ in range(capacity + 1)] for _ in range(len(benefits))]
-    container_params = capacity, weights, benefits, 0
+    top_down_params = capacity, weights, benefits, 0, memo
     print('Measuring top down algorithm...')
-    measures = measure(top_down_container, container_params, memo, iterations)
+    measures = measure(top_down_container, top_down_params, iterations)
     return measures
 
 
-def exists_filename() -> str:
+def generate_figure_filename() -> str:
     """
     checks if the filename exists
     :return: string with the name of the new file
@@ -303,23 +300,23 @@ def exists_filename() -> str:
     i = 1
     name = 'result_graphs/algorithms_runtimes.png'
     while file_exists(name):
-        name = 'result_graphs/algorithms_runtimes' + str(i) + '.png'
+        name = f'result_graphs/algorithms_runtimes({i}).png'
         i += 1
     return name
 
 
-def graph_data(x: list, y: list) -> None:
+def graph_data(titles: list, data: list) -> None:
     """
     shows the bar graph with the average results
-    :param x: Name of the algorithms['Brute', 'Bottom Up', 'Top Down']
-    :param y: average list of the three algorithms
+    :param titles: Name of the algorithms['Brute', 'Bottom Up', 'Top Down']
+    :param data: average list of the three algorithms
     :return: None
     """
-    plt.bar(x, y)  # algorithms data
+    plt.bar(titles, data)  # algorithms data
     plt.ylabel('Average of algorithm times')  # Text Y
     plt.xlabel('Types of algorithms')  # Text X
     plt.title('Average times')  # Text Title
-    plt.savefig(exists_filename())  # Save graphic
+    plt.savefig(generate_figure_filename())  # Save graphic
 
 
 def choose_measure(algorithm: int, iterations: int,
@@ -343,11 +340,10 @@ def choose_measure(algorithm: int, iterations: int,
         measurements += [measurer(iterations, container_params)]
 
     if algorithm == COMPARE_ALL:
-        x = ['Brute Force', 'Bottom Up', 'Top Down']
-        y = measurements
+        titles = ['Brute Force', 'Bottom Up', 'Top Down']
         print("Average times: " + str(measurements))
-        print(Df(data=y, index=x, columns=["Averages Times"]))
-        graph_data(x, y)
+        print(Df(data=measurements, index=titles, columns=["Averages Times"]))
+        graph_data(titles, measurements)
     else:
         print("Average time: " + str(measurements))
 
