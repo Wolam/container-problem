@@ -1,4 +1,4 @@
-# knapsack-problem
+# container-problem
 Comparison between the top-down, bottom-up and brute-force algorithms for the container problem
 
 ## Installation
